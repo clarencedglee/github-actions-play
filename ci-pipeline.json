@@ -1,0 +1,10 @@
+{
+  "svc1": {
+    "attribute1": "One One",
+    "attribute2": "One Two"
+  },
+  "svc2": {
+    "attribute1": "Two One",
+    "attribute2": "Two Two"
+  }
+}

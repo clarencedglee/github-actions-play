@@ -1,0 +1,72 @@
+---
+#--------------------------------------------------------------------------------------------------
+# Main CI deployment workflow for the "main" branch. Triggered whenever there is a commit pushed to main.
+#--------------------------------------------------------------------------------------------------
+name: Conditional
+
+on:
+  push:
+    branches:
+      - matrix-from-artifact-directories
+  workflow_dispatch:
+
+jobs:
+  build-app:
+    name: Create artifact with directories
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          mkdir -p services/svc1/dist && mkdir -p services/svc2/dist
+          touch services/svc1/dist/file.txt && touch services/svc2/dist/file.txt
+          mkdir -p packages/pkg1/dist && mkdir -p packages/pkg2/dist
+          touch packages/pkg1/dist/file.txt && touch packages/pkg2/dist/file.txt
+          ls
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: dists
+          path: |
+            services/*/dist
+            packages/*/dist
+          retention-days: 1
+
+  get-services:
+    needs: [build-app]
+    runs-on: ubuntu-latest
+    outputs:
+      csv: ${{ steps.listServices.outputs.csv }}
+      json: ${{ steps.listServices.outputs.json }}
+    steps:
+      - name: Restore artifact
+        id: services
+        uses: actions/download-artifact@v4
+        with:
+          name: dists
+      - name: List services
+        id: listServices
+        run: |
+          csv=`ls -m services | tr -d ' ' `
+          quoted=`echo $csv | sed 's/\([^,]*\)/"\1"/g'`
+          json=`echo "[$quoted]"`
+          echo csv=$csv >> "$GITHUB_OUTPUT"
+          echo json=$json >> "$GITHUB_OUTPUT"
+        # ls -m lists files in comma separated format: file1, file2, file3
+        # tr -d '' removes spaces: file1,file2,file3
+        # sed 's/\([^,]*\)/"\1"/g' quotes items between commas: "file1","file2","file3"
+
+  matrix-job:
+    needs: [get-services]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service-name: ${{ fromJson(needs.get-services.outputs.json) }}
+        include:
+          - service-name: svc1
+            attribute1: "One to one"
+            attribute2: "One for all"
+          - service-name: svc2
+            attribute1: "Two for one"
+            attribute2: "Two to tango"
+    steps:
+      - run: "echo ${{ matrix.service-name }}, attribute1: ${{ matrix.attribute1 }}, attribute2: ${{ matrix.attribute2 }}"
