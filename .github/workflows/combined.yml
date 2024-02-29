@@ -1,0 +1,47 @@
+---
+#--------------------------------------------------------------------------------------------------
+# Main CI deployment workflow for the "main" branch. Triggered whenever there is a commit pushed to main.
+#--------------------------------------------------------------------------------------------------
+name: Conditional
+
+on:
+  push:
+    branches:
+      - using-matrix
+  workflow_dispatch:
+
+jobs:
+  firstJob:
+    name: First Job
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "run first job"
+    outputs:
+      success: true
+
+  secondJob:
+    name: Second Job
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "run second job"
+    outputs:
+      success: true
+
+  thirdJob:
+    name: Third Job
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "run third job"
+    outputs:
+      success: false
+
+  matrix-job:
+    needs: [firstJob, secondJob, thirdJob]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        item: ${{ needs.*.outputs.success }}
+    # cannot use an if because it applies to the whole matrix, not each item in the matrix
+    # if: ${{ needs.*.outputs.success == true }}
+    steps:
+      - run: echo ${{ matrix.item }}
