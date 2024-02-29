@@ -1,0 +1,38 @@
+---
+#--------------------------------------------------------------------------------------------------
+# Main CI deployment workflow for the "main" branch. Triggered whenever there is a commit pushed to main.
+#--------------------------------------------------------------------------------------------------
+name: Conditional
+
+on:
+  push:
+    branches:
+      - combining-dependent-outputs
+  workflow_dispatch:
+
+jobs:
+  firstJob:
+    name: First Job
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "run first job"
+    outputs:
+      myValue: first-job
+
+  secondJob:
+    name: Second Job
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "run first job"
+    outputs:
+      myValue: second-job
+
+  combine-job:
+    name: Combine Job
+    needs: ["firstJob", "secondJob"]
+    runs-on: ubuntu-latest
+    env:
+      COMBINED: ${{ join(needs.*.outputs.myValue) }}
+    steps:
+      - name: Combine output
+        run: echo "::notice::$COMBINED"
